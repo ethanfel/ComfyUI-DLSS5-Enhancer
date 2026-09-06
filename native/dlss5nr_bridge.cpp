@@ -687,7 +687,9 @@ static void SetNeuralParams(
     SetParamResource("DLSSNR.MVec", g_mvec.Get());
     SetParamResource("DLSSNR.Depth", g_depth.Get());
     SetParamResource("DLSSNR.Output", g_output.Get());
-    SetParamResource("DLSSNR.Backbuffer", g_output.Get());
+    // NR blends against Backbuffer below full intensity. Using its destination
+    // here blends with an empty or previous frame instead of the current color.
+    SetParamResource("DLSSNR.Backbuffer", color);
     SetParamUInt("DLSSNR.ColorSubrectBaseX", 0);
     SetParamUInt("DLSSNR.ColorSubrectBaseY", 0);
     SetParamUInt("DLSSNR.ColorSubrectWidth", neural_color_width);

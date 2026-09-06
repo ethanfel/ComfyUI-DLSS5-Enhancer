@@ -35,6 +35,10 @@ The installed ComfyUI was `/media/p5/Comfyui`, with Conda environment
 `13_env_py313`. Image-batch rendering with warmup and 2x HEVC video rendering
 both completed through ComfyUI with feature-18 verification enabled.
 
+Run `DLSS5_RUN_GPU_TESTS=1 python -m unittest discover -s tests` for GPU pixel
+checks at zero, partial, and full NR intensity. Below full intensity, the NR
+backbuffer must contain the current DLAA/SR image used for blending.
+
 The bridge also explicitly shuts down the directly initialized NR snippet
 before unloading it. NGX core shutdown alone does not release that session.
 Other GPU/driver/runtime combinations and pixel parity with RenoDX have not

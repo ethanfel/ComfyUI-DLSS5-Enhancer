@@ -19,6 +19,10 @@ from .paths import RuntimeLayout
 EXPECTED_AMPERE_ADDON_SHA256 = "D5ADF82EB44B065F4C590AC91FE824BAB07AFEA0EB9F994BDE936710C8593952"
 EXPECTED_AMPERE_NEURAL_SHA256 = "6EB209E764F39872625DEBD6ABAF45E2BB6322F6F270F781F70C059AE30B3927"
 
+# GeForce and workstation model numbers use different naming schemes.
+# Architecture mapping: https://developer.nvidia.com/cuda/gpus
+_RTX_GENERATIONS = {"8.6": 30, "8.9": 40, "12.0": 50}
+
 # Version tolerant: the runtime version in the first marker changes between
 # DLSS NR builds, and pinning it would reject a working newer runtime.
 FEATURE_18_MARKERS = (
@@ -130,10 +134,12 @@ def detect_gpu() -> dict[str, Any]:
         if len(parts) < 4 or "RTX" not in parts[0].upper():
             continue
         name, driver, memory, capability = parts[:4]
-        match = re.search(r"RTX\s+(\d{2})", name.upper())
-        generation = int(match.group(1)) if match else 0
-        if generation < 30:
-            raise RuntimeError(f"{name} is outside the supported RTX 30/40/50 scope.")
+        generation = _RTX_GENERATIONS.get(capability)
+        if generation is None:
+            raise RuntimeError(
+                f"{name} (compute capability {capability}) is outside the supported "
+                "RTX Ampere/Ada/Blackwell scope (8.6, 8.9, 12.0)."
+            )
         return {
             "name": name,
             "driver": driver,

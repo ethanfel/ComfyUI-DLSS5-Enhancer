@@ -70,6 +70,14 @@ this repository and are not redistributed by it. See
 | ComfyUI | A build with the V3 node API (`comfy_api.latest`) |
 | Python | `numpy`, `av` and OpenCV. ComfyUI portable normally ships all three; `opencv-python` is deliberately not in `requirements.txt` so it cannot overwrite an existing `opencv-contrib-python` |
 
+GPU detection uses the CUDA compute capability reported by `nvidia-smi`:
+8.6 for Ampere, 8.9 for Ada, and 12.0 for RTX Blackwell. This also recognizes
+workstation names such as RTX A6000, RTX 6000 Ada, and RTX PRO 6000 Blackwell
+without treating their model numbers as GeForce generations. See
+[NVIDIA's compute capability table](https://developer.nvidia.com/cuda/gpus).
+Passing detection does not establish that a particular GPU/runtime combination
+has been render-tested; the runtime compatibility checks still apply.
+
 ## Installation
 
 ### Experimental Linux backend
@@ -513,7 +521,7 @@ One measurement, RTX 5090 with driver 610.74, 640x360 to 1280x720 at 2x Performa
 | `The DLSS 5 runtime in ... is incomplete` | Files were deleted or extracted partially. The message lists what is missing |
 | `The native DLSS worker at ... could not be started` | Antivirus is blocking the worker, or the file is not executable. Add the runtime folder to the exclusion list |
 | `nvidia-smi is unavailable` | The NVIDIA driver tools are not on `PATH`, or no NVIDIA GPU is present |
-| `is outside the supported RTX 30/40/50 scope` | An RTX card older than the 30 series |
+| `is outside the supported RTX Ampere/Ada/Blackwell scope` | The reported compute capability is not 8.6, 8.9, or 12.0. Turing RTX cards remain unsupported; if a newer RTX card reports an unknown value, check its driver and `nvidia-smi` output |
 | `No supported NVIDIA RTX GPU was detected` | nvidia-smi ran but reported no card with RTX in its name |
 | `OpenCV is required` | Install `opencv-python`, or `opencv-contrib-python` if you already use it |
 | `The PyAV package is required` | Only the video node needs it: `python_embeded\python.exe -m pip install av` |

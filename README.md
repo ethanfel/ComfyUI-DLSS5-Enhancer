@@ -71,6 +71,22 @@ this repository and are not redistributed by it. See
 
 ## Installation
 
+### Experimental Linux backend
+
+This checkout includes a direct NGX worker for Linux/Wine. ComfyUI and FFmpeg
+run natively on Linux; the worker uses Wine, VKD3D-Proton, DXVK-NVAPI and
+NVIDIA's Windows NGX libraries. It avoids the ReShade wrapper used on Windows.
+The node names, image/video inputs, temporal guides and version-4 frame protocol
+are preserved. Output is not expected to be pixel-identical to the ReShade backend.
+
+Build instructions and dependencies are in [native/README.md](native/README.md).
+The local `config.json` can specify `wine_executable`, `wine_prefix` and
+`ffmpeg_dir`. The prefix must already be initialized with VKD3D-Proton and
+DXVK-NVAPI. Linux verification requires successful signed NR initialization,
+feature-18 creation and evaluation in the worker's own diagnostics.
+
+The installation commands below describe Windows.
+
 All commands below are run from the ComfyUI portable root, the folder containing
 `python_embeded` and `ComfyUI`.
 
@@ -327,7 +343,8 @@ One measurement, RTX 5090 with driver 610.74, 640x360 to 1280x720 at 2x Performa
   ffprobe counting pass is treated as authoritative and fails the run.
 - Running the video node twice with identical inputs replays the cached result and writes no
   new file. Change an input, or the source file, to render again.
-- Windows only. The worker, the carrier and the add-on are Windows binaries.
+- The Linux backend is experimental and uses Wine to run the direct NGX worker.
+  GPU/driver/runtime combinations require testing; it is not a native Vulkan DLSS SDK port.
 
 ## Troubleshooting
 

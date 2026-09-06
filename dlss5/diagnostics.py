@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 import subprocess
+import sys
 import threading
 from collections import deque
 from dataclasses import dataclass, field
@@ -29,6 +30,7 @@ FEATURE_18_MARKERS = (
 # Lines worth keeping even when the buffer overflows. The setup evidence is what
 # makes a late crash report actionable, so it is pinned from the start of the run.
 _INTERESTING = (
+    "[dlss5nr]",
     "error",
     "exception",
     "failed",
@@ -153,7 +155,7 @@ def file_sha256(path: Path) -> str:
 
 def inspect_bundle(layout: RuntimeLayout) -> dict[str, Any]:
     """Fingerprint the neural components so failures can name what is installed."""
-    addon = file_sha256(layout.addon)
+    addon = file_sha256(layout.addon) if sys.platform != "linux" else "direct NGX bridge"
     neural = file_sha256(layout.neural_runtime)
     return {
         "addon_sha256": addon,
@@ -168,7 +170,7 @@ def ensure_supported(layout: RuntimeLayout) -> tuple[dict[str, Any], dict[str, A
     """Validate GPU and runtime pairing before a session is started."""
     gpu = detect_gpu()
     bundle = inspect_bundle(layout)
-    if gpu["generation"] == 30 and not bundle["known_ampere_pair"]:
+    if sys.platform != "linux" and gpu["generation"] == 30 and not bundle["known_ampere_pair"]:
         raise RuntimeError(
             f"{gpu['name']} needs the tested experimental Ampere pair "
             "(RenoDX DLSS5 v4.70 + DLSS NR 310.8.SF-v2). Installed hashes are "
@@ -185,6 +187,7 @@ def relevant_lines(reshade_log: str, limit: int = 300) -> list[str]:
         for line in lines
         if "DLSS 5 Neural Rendering" in line
         or "DLSSNR" in line
+        or "[dlss5nr]" in line
         or "feature 18" in line
         or "exception" in line.lower()
         or "failed" in line.lower()
@@ -192,13 +195,20 @@ def relevant_lines(reshade_log: str, limit: int = 300) -> list[str]:
     return (picked or lines)[-limit:]
 
 
-def verify_feature_18(reshade_log: str) -> dict[str, Any]:
+def verify_feature_18(reshade_log: str, *, direct: bool = False) -> dict[str, Any]:
     """Confirm that signed feature-18 execution actually happened.
 
     Without this check a render can silently complete with plain upscaling, which
     looks like a working node but applies no neural rendering at all.
     """
-    missing = [name for name, pattern in FEATURE_18_MARKERS if not pattern.search(reshade_log)]
+    markers = FEATURE_18_MARKERS
+    if direct:
+        markers = (
+            ("signed NR initialized", re.compile(r"\[dlss5nr\] signed NR initialized")),
+            ("feature 18 created", re.compile(r"\[dlss5nr\] Feature18 CreateFeature\(18\) -> 0x00000001")),
+            ("feature 18 evaluated", re.compile(r"\[dlss5nr\] Feature18 EvaluateFeature succeeded")),
+        )
+    missing = [name for name, pattern in markers if not pattern.search(reshade_log)]
     if missing:
         evidence = "\n".join(relevant_lines(reshade_log, limit=40))
         raise RuntimeError(
@@ -217,6 +227,7 @@ def verify_feature_18(reshade_log: str) -> dict[str, Any]:
             or "feature 18 created" in line
             or "feature 18 evaluation succeeded" in line
             or "NR upscaling fell back" in line
+            or (direct and ("Feature18" in line or "signed NR initialized" in line))
         ][-20:],
     }
 
